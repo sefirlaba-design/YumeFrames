@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yume Frames — AI Anime Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;600;700&display=swap');
+
+    :root {
+      --accent: #a78bfa;
+      --accent-glow: rgba(167, 139, 250, 0.45);
+      --glass-bg: rgba(10, 8, 20, 0.65);
+      --glass-border: rgba(167, 139, 250, 0.25);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: #000;
+      overflow: hidden;
+      height: 100dvh;
+    }
+
+    /* ── Video background ── */
+    #bg-video {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+      filter: brightness(0.55) saturate(1.2);
+    }
+
+    /* ── Overlay ── */
+    #overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      background: linear-gradient(
+        135deg,
+        rgba(5, 2, 15, 0.82) 0%,
+        rgba(15, 5, 30, 0.75) 50%,
+        rgba(5, 2, 15, 0.88) 100%
+      );
+    }
+
+    /* ── Scanline effect ── */
+    #overlay::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.08) 2px,
+        rgba(0, 0, 0, 0.08) 4px
+      );
+      pointer-events: none;
+    }
+
+    /* ── Language switcher ── */
+    #lang-switcher {
+      position: fixed;
+      top: 1.25rem;
+      right: 1.5rem;
+      z-index: 100;
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--glass-border);
+      border-radius: 6px;
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+      background: rgba(10, 8, 20, 0.5);
+    }
+
+    .lang-btn {
+      padding: 0.35rem 0.75rem;
+      font-size: 0.7rem;
+      font-family: 'Share Tech Mono', monospace;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      color: rgba(167, 139, 250, 0.5);
+      background: transparent;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .lang-btn.active {
+      background: var(--accent-glow);
+      color: #fff;
+    }
+
+    .lang-btn:hover:not(.active) { color: var(--accent); }
+
+    /* ── Main card (game popup) ── */
+    #card {
+      position: relative;
+      z-index: 10;
+      width: min(480px, 92vw);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 4px;
+      backdrop-filter: blur(24px) saturate(1.5);
+      -webkit-backdrop-filter: blur(24px) saturate(1.5);
+      box-shadow:
+        0 0 0 1px rgba(167, 139, 250, 0.08) inset,
+        0 8px 64px rgba(0, 0, 0, 0.7),
+        0 0 60px rgba(167, 139, 250, 0.08);
+      padding: 2.5rem 2.25rem 2.25rem;
+    }
+
+    /* Top bar — game window chrome */
+    #card::before {
+      content: '[ SYS://YUME_FRAMES_v0.1 ]';
+      display: block;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.12em;
+      color: rgba(167, 139, 250, 0.45);
+      margin-bottom: 1.75rem;
+    }
+
+    /* Corner accent top-left */
+    #card::after {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: -1px;
+      width: 40px;
+      height: 40px;
+      border-top: 2px solid var(--accent);
+      border-left: 2px solid var(--accent);
+      border-radius: 4px 0 0 0;
+    }
+
+    /* Corner accent bottom-right */
+    .corner-br {
+      position: absolute;
+      bottom: -1px;
+      right: -1px;
+      width: 40px;
+      height: 40px;
+      border-bottom: 2px solid var(--accent);
+      border-right: 2px solid var(--accent);
+      border-radius: 0 0 4px 0;
+    }
+
+    /* ── Logo / brand ── */
+    #logo {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1rem;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-shadow: 0 0 20px var(--accent-glow);
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Headline ── */
+    #headline {
+      font-size: clamp(1.35rem, 4vw, 1.75rem);
+      font-weight: 700;
+      line-height: 1.25;
+      color: #f0edff;
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.01em;
+      white-space: pre-line;
+    }
+
+    /* ── Subheadline ── */
+    #subheadline {
+      font-size: 0.875rem;
+      font-weight: 300;
+      color: rgba(200, 190, 255, 0.65);
+      margin-bottom: 2rem;
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Separator ── */
+    .sep {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, var(--accent) 0%, transparent 100%);
+      margin-bottom: 1.75rem;
+      opacity: 0.3;
+    }
+
+    /* ── Form area ── */
+    #form-area {
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    #form-area.hidden {
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      position: absolute;
+    }
+
+    #email-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--glass-border);
+      border-radius: 3px;
+      color: #f0edff;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+      padding: 0.75rem 1rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 0.75rem;
+    }
+
+    #email-input::placeholder { color: rgba(167, 139, 250, 0.4); }
+
+    #email-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.12), 0 0 20px rgba(167, 139, 250, 0.1);
+    }
+
+    #submit-btn {
+      width: 100%;
+      padding: 0.8rem 1rem;
+      background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+      border: none;
+      border-radius: 3px;
+      color: #fff;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.875rem;
+      letter-spacing: 0.12em;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 0 24px rgba(124, 58, 237, 0.4);
+    }
+
+    #submit-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    #submit-btn:hover { transform: translateY(-1px); box-shadow: 0 0 36px rgba(124, 58, 237, 0.6); }
+    #submit-btn:hover::before { opacity: 1; }
+    #submit-btn:active { transform: translateY(0); }
+    #submit-btn span { position: relative; z-index: 1; }
+    #submit-btn.loading { pointer-events: none; opacity: 0.7; }
+
+    /* ── Success message ── */
+    #success-msg {
+      display: none;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      text-align: center;
+      padding: 1rem 0 0.5rem;
+    }
+
+    #success-msg.visible {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    #success-msg .icon {
+      font-size: 2rem;
+      margin-bottom: 0.75rem;
+      filter: drop-shadow(0 0 12px var(--accent-glow));
+    }
+
+    #success-msg .title {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1rem;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    #success-msg .body {
+      font-size: 0.8rem;
+      color: rgba(200, 190, 255, 0.6);
+      letter-spacing: 0.05em;
+      white-space: pre-line;
+    }
+
+    /* ── Error message ── */
+    #error-msg {
+      font-size: 0.75rem;
+      color: #f87171;
+      margin-top: 0.5rem;
+      min-height: 1rem;
+      font-family: 'Share Tech Mono', monospace;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Footer note ── */
+    #footer-note {
+      margin-top: 1.5rem;
+      font-size: 0.68rem;
+      color: rgba(167, 139, 250, 0.3);
+      text-align: center;
+      font-family: 'Share Tech Mono', monospace;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── Ambient floating dots ── */
+    .dot {
+      position: fixed;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0;
+      animation: float-dot linear infinite;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    @keyframes float-dot {
+      0%   { opacity: 0; transform: translateY(0) scale(1); }
+      10%  { opacity: 0.6; }
+      90%  { opacity: 0.3; }
+      100% { opacity: 0; transform: translateY(-100vh) scale(0.4); }
+    }
+  </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+  <!--
+    Background video.
+    Replace the <source src=""> with:
+      • A local file:  <source src="bg.mp4" type="video/mp4" />
+      • A free clip from pexels.com/videos or mixkit.co (dark anime / fantasy)
+    The poster image shows while the video loads.
+  -->
+  <video id="bg-video" autoplay muted loop playsinline
+    poster="https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=1600&q=80">
+    <source src="zlodeyka_bg.mp4.mp4" type="video/mp4" />
+  </video>
+
+  <!-- Dark overlay + scanlines -->
+  <div id="overlay"></div>
+
+  <!-- Ambient particles -->
+  <div id="dots-container"></div>
+
+  <!-- EN / RU switcher -->
+  <div id="lang-switcher">
+    <button class="lang-btn active" onclick="setLang('en')">EN</button>
+    <button class="lang-btn"        onclick="setLang('ru')">RU</button>
+  </div>
+
+  <!-- ── Main card ── -->
+  <div id="card">
+    <div class="corner-br"></div>
+
+    <div id="logo">YUME FRAMES</div>
+
+    <h1 id="headline"></h1>
+    <p  id="subheadline"></p>
+
+    <div class="sep"></div>
+
+    <!-- Waitlist form -->
+    <div id="form-area">
+      <input
+        id="email-input"
+        type="email"
+        autocomplete="email"
+        inputmode="email"
+      />
+      <button id="submit-btn" onclick="handleSubmit()">
+        <span id="btn-label"></span>
+      </button>
+      <div id="error-msg"></div>
+    </div>
+
+    <!-- Success state -->
+    <div id="success-msg">
+      <div class="icon">⬡</div>
+      <div class="title" id="success-title"></div>
+      <div class="body"  id="success-body"></div>
+    </div>
+
+    <div id="footer-note"></div>
+  </div>
+
+  <script>
+    // ─────────────────────────────────────────────────────────────
+    //  CONFIG
+    //  Replace with your own Google Apps Script Web App URL.
+    // ─────────────────────────────────────────────────────────────
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzVzcLpkyS_e6knupbj-YMRXTKUjQZ4CiY20e03L3MemLomjPCRicP39ebfNJwnnuyVww/exec';
+
+    // ─────────────────────────────────────────────────────────────
+    //  TRANSLATIONS
+    // ─────────────────────────────────────────────────────────────
+    const i18n = {
+      en: {
+        headline:      'Turn ANY Manhwa text into Anime.\nPure AI generation.',
+        subheadline:   'The waitlist for early beta is strictly limited.',
+        placeholder:   'Enter your email',
+        btnLabel:      'Join the Waitlist',
+        errorEmpty:    '> enter a valid email address',
+        errorInvalid:  '> invalid email format',
+        errorNetwork:  '> connection failed — try again',
+        successTitle:  'ACCESS GRANTED',
+        successBody:   'You are on the list.\nWait for the system update.',
+        footerNote:    '// no spam · unsubscribe anytime',
+      },
+      ru: {
+        headline:      'Оживляем любимую манхву.\n100% ИИ-генерация аниме из текста.',
+        subheadline:   'Лист ожидания на ранний бета-тест строго ограничен.',
+        placeholder:   'Введите ваш email',
+        btnLabel:      'Занять место',
+        errorEmpty:    '> введите корректный email',
+        errorInvalid:  '> неверный формат email',
+        errorNetwork:  '> ошибка соединения — попробуйте снова',
+        successTitle:  'ДОСТУП ПОЛУЧЕН',
+        successBody:   'Вы в списке.\nОжидайте обновления системы.',
+        footerNote:    '// без спама · отписка в любой момент',
+      },
+    };
+
+    let currentLang = 'en';
+
+    function setLang(lang) {
+      currentLang = lang;
+      const t = i18n[lang];
+
+      document.getElementById('headline').innerText      = t.headline;
+      document.getElementById('subheadline').innerText   = t.subheadline;
+      document.getElementById('email-input').placeholder = t.placeholder;
+      document.getElementById('btn-label').innerText     = t.btnLabel;
+      document.getElementById('success-title').innerText = t.successTitle;
+      document.getElementById('success-body').innerText  = t.successBody;
+      document.getElementById('footer-note').innerText   = t.footerNote;
+      document.getElementById('error-msg').innerText     = '';
+
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent === lang.toUpperCase());
+      });
+
+      document.documentElement.lang = lang;
+    }
+
+    setLang('en'); // default
+
+    // ─────────────────────────────────────────────────────────────
+    //  FORM SUBMIT
+    // ─────────────────────────────────────────────────────────────
+    async function handleSubmit() {
+      const t     = i18n[currentLang];
+      const input = document.getElementById('email-input');
+      const btn   = document.getElementById('submit-btn');
+      const err   = document.getElementById('error-msg');
+      const email = input.value.trim();
+
+      err.innerText = '';
+
+      if (!email) {
+        err.innerText = t.errorEmpty;
+        shake(input);
+        return;
+      }
+
+      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRe.test(email)) {
+        err.innerText = t.errorInvalid;
+        shake(input);
+        return;
+      }
+
+      btn.classList.add('loading');
+      document.getElementById('btn-label').innerText = '...';
+
+      try {
+        // no-cors is required for Google Apps Script cross-origin POST.
+        // The response will be opaque, so we assume success if no network error.
+        await fetch(APPS_SCRIPT_URL, {
+          method:  'POST',
+          mode:    'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            email,
+            lang: currentLang,
+            ts:   new Date().toISOString(),
+          }),
+        });
+        showSuccess();
+      } catch (_) {
+        err.innerText = t.errorNetwork;
+        btn.classList.remove('loading');
+        document.getElementById('btn-label').innerText = t.btnLabel;
+      }
+    }
+
+    function showSuccess() {
+      document.getElementById('form-area').classList.add('hidden');
+      const msg = document.getElementById('success-msg');
+      msg.style.display = 'block';
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => msg.classList.add('visible'))
+      );
+    }
+
+    // Horizontal shake on invalid input
+    function shake(el) {
+      const moves = [-6, 6, -5, 5, -3, 3, 0];
+      let i = 0;
+      el.style.transition = 'transform 0.05s';
+      const step = () => {
+        el.style.transform = `translateX(${moves[i]}px)`;
+        if (++i < moves.length) setTimeout(step, 50);
+        else el.style.transform = '';
+      };
+      step();
+    }
+
+    document.getElementById('email-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleSubmit();
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    //  AMBIENT PARTICLES
+    // ─────────────────────────────────────────────────────────────
+    const container = document.getElementById('dots-container');
+    for (let i = 0; i < 20; i++) {
+      const dot  = document.createElement('div');
+      dot.className = 'dot';
+      const size = Math.random() * 3 + 1;
+      dot.style.cssText = `
+        width:${size}px;
+        height:${size}px;
+        left:${Math.random() * 100}vw;
+        bottom:-10px;
+        animation-duration:${8 + Math.random() * 14}s;
+        animation-delay:${Math.random() * 12}s;
+        filter:blur(${Math.random() > 0.5 ? 1 : 0}px);
+      `;
+      container.appendChild(dot);
+    }
+  </script>
+</body>
+</html>
