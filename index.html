@@ -6,99 +6,122 @@
   <title>Yume Frames — AI Anime Generator</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;500;600;700&display=swap');
 
     :root {
-      --accent: #a78bfa;
-      --accent-glow: rgba(167, 139, 250, 0.45);
-      --glass-bg: rgba(10, 8, 20, 0.65);
+      --accent:       #a78bfa;
+      --accent-glow:  rgba(167, 139, 250, 0.45);
+      --glass-bg:     rgba(10, 8, 20, 0.65);
       --glass-border: rgba(167, 139, 250, 0.25);
+      --text-dim:     rgba(200, 190, 255, 0.65);
+      --text-bright:  #f0edff;
     }
 
-    * { box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
 
     body {
-      margin: 0;
       font-family: 'Inter', sans-serif;
-      background: #000;
-      overflow: hidden;
-      height: 100dvh;
+      background: #05020f;
+      color: var(--text-bright);
     }
 
-    /* ── Video background ── */
+    /* ═══════════════════════════════════════
+       SECTION 1 — HERO
+    ═══════════════════════════════════════ */
+    #hero {
+      position: relative;
+      width: 100%;
+      height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
     #bg-video {
-      position: fixed;
+      position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
       z-index: 0;
-      filter: brightness(0.55) saturate(1.2);
+      filter: brightness(0.5) saturate(1.2);
     }
 
-    /* ── Overlay ── */
     #overlay {
-      position: fixed;
+      position: absolute;
       inset: 0;
       z-index: 1;
       background: linear-gradient(
         135deg,
-        rgba(5, 2, 15, 0.82) 0%,
-        rgba(15, 5, 30, 0.75) 50%,
-        rgba(5, 2, 15, 0.88) 100%
+        rgba(5, 2, 15, 0.84) 0%,
+        rgba(15, 5, 30, 0.76) 50%,
+        rgba(5, 2, 15, 0.90) 100%
       );
     }
 
-    /* ── Scanline effect ── */
     #overlay::after {
       content: '';
       position: absolute;
       inset: 0;
       background: repeating-linear-gradient(
         0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 0, 0, 0.08) 2px,
-        rgba(0, 0, 0, 0.08) 4px
+        transparent, transparent 2px,
+        rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px
       );
       pointer-events: none;
     }
 
-    /* ── Language switcher ── */
-    #lang-switcher {
-      position: fixed;
-      top: 1.25rem;
-      right: 1.5rem;
-      z-index: 100;
+    /* scroll hint arrow */
+    #scroll-hint {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
       display: flex;
-      gap: 0;
-      border: 1px solid var(--glass-border);
-      border-radius: 6px;
-      overflow: hidden;
-      backdrop-filter: blur(12px);
-      background: rgba(10, 8, 20, 0.5);
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      opacity: 0.4;
+      animation: bob 2s ease-in-out infinite;
     }
 
-    .lang-btn {
-      padding: 0.35rem 0.75rem;
-      font-size: 0.7rem;
+    #scroll-hint span {
       font-family: 'Share Tech Mono', monospace;
-      letter-spacing: 0.1em;
-      cursor: pointer;
-      color: rgba(167, 139, 250, 0.5);
-      background: transparent;
-      border: none;
-      transition: all 0.2s;
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      color: var(--accent);
     }
 
-    .lang-btn.active {
-      background: var(--accent-glow);
-      color: #fff;
+    #scroll-hint svg { color: var(--accent); }
+
+    @keyframes bob {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50%       { transform: translateX(-50%) translateY(6px); }
     }
 
-    .lang-btn:hover:not(.active) { color: var(--accent); }
+    /* ── Ambient floating dots ── */
+    .dot {
+      position: absolute;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0;
+      animation: float-dot linear infinite;
+      z-index: 2;
+      pointer-events: none;
+    }
 
-    /* ── Main card (game popup) ── */
+    @keyframes float-dot {
+      0%   { opacity: 0; transform: translateY(0) scale(1); }
+      10%  { opacity: 0.5; }
+      90%  { opacity: 0.25; }
+      100% { opacity: 0; transform: translateY(-100vh) scale(0.4); }
+    }
+
+    /* ── Main card ── */
     #card {
       position: relative;
       z-index: 10;
@@ -109,49 +132,41 @@
       backdrop-filter: blur(24px) saturate(1.5);
       -webkit-backdrop-filter: blur(24px) saturate(1.5);
       box-shadow:
-        0 0 0 1px rgba(167, 139, 250, 0.08) inset,
-        0 8px 64px rgba(0, 0, 0, 0.7),
-        0 0 60px rgba(167, 139, 250, 0.08);
+        0 0 0 1px rgba(167, 139, 250, 0.07) inset,
+        0 8px 64px rgba(0,0,0,0.7),
+        0 0 60px rgba(167, 139, 250, 0.07);
       padding: 2.5rem 2.25rem 2.25rem;
     }
 
-    /* Top bar — game window chrome */
     #card::before {
       content: '[ SYS://YUME_FRAMES_v0.1 ]';
       display: block;
       font-family: 'Share Tech Mono', monospace;
       font-size: 0.62rem;
       letter-spacing: 0.12em;
-      color: rgba(167, 139, 250, 0.45);
+      color: rgba(167, 139, 250, 0.4);
       margin-bottom: 1.75rem;
     }
 
-    /* Corner accent top-left */
     #card::after {
       content: '';
       position: absolute;
-      top: -1px;
-      left: -1px;
-      width: 40px;
-      height: 40px;
+      top: -1px; left: -1px;
+      width: 40px; height: 40px;
       border-top: 2px solid var(--accent);
       border-left: 2px solid var(--accent);
       border-radius: 4px 0 0 0;
     }
 
-    /* Corner accent bottom-right */
     .corner-br {
       position: absolute;
-      bottom: -1px;
-      right: -1px;
-      width: 40px;
-      height: 40px;
+      bottom: -1px; right: -1px;
+      width: 40px; height: 40px;
       border-bottom: 2px solid var(--accent);
       border-right: 2px solid var(--accent);
       border-radius: 0 0 4px 0;
     }
 
-    /* ── Logo / brand ── */
     #logo {
       font-family: 'Share Tech Mono', monospace;
       font-size: 1rem;
@@ -161,39 +176,34 @@
       margin-bottom: 1.5rem;
     }
 
-    /* ── Headline ── */
     #headline {
       font-size: clamp(1.35rem, 4vw, 1.75rem);
       font-weight: 700;
       line-height: 1.25;
-      color: #f0edff;
+      color: var(--text-bright);
       margin-bottom: 0.75rem;
       letter-spacing: -0.01em;
       white-space: pre-line;
     }
 
-    /* ── Subheadline ── */
     #subheadline {
       font-size: 0.875rem;
       font-weight: 300;
-      color: rgba(200, 190, 255, 0.65);
+      color: var(--text-dim);
       margin-bottom: 2rem;
       letter-spacing: 0.01em;
     }
 
-    /* ── Separator ── */
     .sep {
       width: 100%;
       height: 1px;
       background: linear-gradient(90deg, var(--accent) 0%, transparent 100%);
       margin-bottom: 1.75rem;
-      opacity: 0.3;
+      opacity: 0.28;
     }
 
-    /* ── Form area ── */
-    #form-area {
-      transition: opacity 0.4s ease, transform 0.4s ease;
-    }
+    /* ── Form ── */
+    #form-area { transition: opacity 0.4s ease, transform 0.4s ease; }
 
     #form-area.hidden {
       opacity: 0;
@@ -204,10 +214,10 @@
 
     #email-input {
       width: 100%;
-      background: rgba(255, 255, 255, 0.04);
+      background: rgba(255,255,255,0.04);
       border: 1px solid var(--glass-border);
       border-radius: 3px;
-      color: #f0edff;
+      color: var(--text-bright);
       font-family: 'Inter', sans-serif;
       font-size: 0.875rem;
       padding: 0.75rem 1rem;
@@ -216,11 +226,11 @@
       margin-bottom: 0.75rem;
     }
 
-    #email-input::placeholder { color: rgba(167, 139, 250, 0.4); }
+    #email-input::placeholder { color: rgba(167, 139, 250, 0.38); }
 
     #email-input:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.12), 0 0 20px rgba(167, 139, 250, 0.1);
+      box-shadow: 0 0 0 3px rgba(167,139,250,0.12), 0 0 20px rgba(167,139,250,0.08);
     }
 
     #submit-btn {
@@ -237,7 +247,7 @@
       position: relative;
       overflow: hidden;
       transition: transform 0.15s, box-shadow 0.2s;
-      box-shadow: 0 0 24px rgba(124, 58, 237, 0.4);
+      box-shadow: 0 0 24px rgba(124,58,237,0.4);
     }
 
     #submit-btn::before {
@@ -249,13 +259,13 @@
       transition: opacity 0.2s;
     }
 
-    #submit-btn:hover { transform: translateY(-1px); box-shadow: 0 0 36px rgba(124, 58, 237, 0.6); }
+    #submit-btn:hover { transform: translateY(-1px); box-shadow: 0 0 36px rgba(124,58,237,0.6); }
     #submit-btn:hover::before { opacity: 1; }
     #submit-btn:active { transform: translateY(0); }
     #submit-btn span { position: relative; z-index: 1; }
     #submit-btn.loading { pointer-events: none; opacity: 0.7; }
 
-    /* ── Success message ── */
+    /* ── Success ── */
     #success-msg {
       display: none;
       opacity: 0;
@@ -265,11 +275,7 @@
       padding: 1rem 0 0.5rem;
     }
 
-    #success-msg.visible {
-      display: block;
-      opacity: 1;
-      transform: translateY(0);
-    }
+    #success-msg.visible { display: block; opacity: 1; transform: translateY(0); }
 
     #success-msg .icon {
       font-size: 2rem;
@@ -277,7 +283,7 @@
       filter: drop-shadow(0 0 12px var(--accent-glow));
     }
 
-    #success-msg .title {
+    #success-msg .s-title {
       font-family: 'Share Tech Mono', monospace;
       font-size: 1rem;
       letter-spacing: 0.1em;
@@ -286,14 +292,13 @@
       text-shadow: 0 0 16px var(--accent-glow);
     }
 
-    #success-msg .body {
+    #success-msg .s-body {
       font-size: 0.8rem;
-      color: rgba(200, 190, 255, 0.6);
+      color: rgba(200,190,255,0.6);
       letter-spacing: 0.05em;
       white-space: pre-line;
     }
 
-    /* ── Error message ── */
     #error-msg {
       font-size: 0.75rem;
       color: #f87171;
@@ -303,216 +308,750 @@
       letter-spacing: 0.05em;
     }
 
-    /* ── Footer note ── */
-    #footer-note {
-      margin-top: 1.5rem;
-      font-size: 0.68rem;
-      color: rgba(167, 139, 250, 0.3);
-      text-align: center;
-      font-family: 'Share Tech Mono', monospace;
-      letter-spacing: 0.08em;
+    /* ═══════════════════════════════════════
+       SECTION 2 — HOW IT WORKS
+    ═══════════════════════════════════════ */
+    #how-it-works {
+      width: 100%;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 5rem 1.5rem;
+      background: linear-gradient(180deg, #05020f 0%, #080516 60%, #05020f 100%);
+      position: relative;
     }
 
-    /* ── Ambient floating dots ── */
-    .dot {
-      position: fixed;
-      border-radius: 50%;
-      background: var(--accent);
-      opacity: 0;
-      animation: float-dot linear infinite;
-      z-index: 2;
+    /* subtle grid texture */
+    #how-it-works::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(167,139,250,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(167,139,250,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
       pointer-events: none;
     }
 
-    @keyframes float-dot {
-      0%   { opacity: 0; transform: translateY(0) scale(1); }
-      10%  { opacity: 0.6; }
-      90%  { opacity: 0.3; }
-      100% { opacity: 0; transform: translateY(-100vh) scale(0.4); }
+    /* section label */
+    .section-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      color: rgba(167,139,250,0.45);
+      margin-bottom: 0.75rem;
+      text-align: center;
+    }
+
+    .section-title {
+      font-size: clamp(1.5rem, 3.5vw, 2.25rem);
+      font-weight: 700;
+      color: var(--text-bright);
+      text-align: center;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .section-sub {
+      font-size: 0.875rem;
+      color: var(--text-dim);
+      text-align: center;
+      margin-bottom: 3.5rem;
+      font-weight: 300;
+    }
+
+    /* ── Split layout ── */
+    #hiw-split {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 960px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: center;
+    }
+
+    @media (max-width: 720px) {
+      #hiw-split {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+      }
+    }
+
+    /* ── Left: steps ── */
+    #steps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 1.1rem;
+      align-items: flex-start;
+      transition: opacity 0.4s ease;
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    .step-item.active { opacity: 1; }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      border: 1px solid rgba(167,139,250,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      color: rgba(167,139,250,0.5);
+      transition: all 0.4s ease;
+      margin-top: 2px;
+    }
+
+    .step-item.active .step-num {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+      background: rgba(167,139,250,0.08);
+    }
+
+    .step-content { flex: 1; }
+
+    .step-tag {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.15em;
+      color: rgba(167,139,250,0.4);
+      margin-bottom: 0.3rem;
+      transition: color 0.4s;
+    }
+
+    .step-item.active .step-tag { color: var(--accent); }
+
+    .step-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-bright);
+      margin-bottom: 0.35rem;
+      letter-spacing: -0.01em;
+    }
+
+    .step-desc {
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      font-weight: 300;
+      line-height: 1.55;
+    }
+
+    /* active step: left accent line */
+    .step-item { position: relative; padding-left: 0; }
+
+    /* progress bar under steps */
+    #step-progress {
+      margin-top: 2.5rem;
+      display: flex;
+      gap: 6px;
+    }
+
+    .prog-dot {
+      height: 3px;
+      flex: 1;
+      border-radius: 99px;
+      background: rgba(167,139,250,0.15);
+      transition: background 0.3s;
+    }
+
+    .prog-dot.active { background: var(--accent); }
+
+    /* ── Right: phone frame wrapper ── */
+    #phone-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #magic-box {
+      position: relative;
+      width: min(260px, 46vw);
+      aspect-ratio: 9 / 16;
+      background: #08050f;
+      /* phone outer shell */
+      border: 8px solid #1a1228;
+      border-radius: 40px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(167,139,250,0.18),
+        0 0 0 2px rgba(10,8,20,0.9),
+        0 0 0 3px rgba(167,139,250,0.08),
+        0 24px 80px rgba(0,0,0,0.7),
+        0 0 60px rgba(167,139,250,0.1);
+    }
+
+    /* phone inner bezel */
+    #magic-box::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 33px;
+      box-shadow: inset 0 0 0 1px rgba(167,139,250,0.1);
+      z-index: 30;
+      pointer-events: none;
+    }
+
+    /* dynamic island / notch */
+    #magic-box::after {
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 72px;
+      height: 22px;
+      background: #08050f;
+      border-radius: 99px;
+      z-index: 31;
+      box-shadow: 0 0 0 1px rgba(167,139,250,0.08);
+    }
+
+    /* ── State layers ── */
+    .mb-state {
+      position: absolute;
+      inset: 0;
+      transition: opacity 0.5s ease;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .mb-state.active { opacity: 1; pointer-events: auto; }
+
+    /* --- State 1: scrolling text --- */
+    #state-input {
+      overflow: hidden;
+      padding: 2.5rem 1rem 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #scroll-track {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      animation: scroll-up 7s linear infinite;
+    }
+
+    @keyframes scroll-up {
+      0%   { transform: translateY(0); }
+      100% { transform: translateY(-50%); }
+    }
+
+    .text-line {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.72rem;
+      line-height: 1.6;
+      color: rgba(200,190,255,0.55);
+      font-weight: 300;
+    }
+
+    .text-line.chapter {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      color: rgba(167,139,250,0.5);
+      margin-bottom: 4px;
+    }
+
+    /* --- State 2: processing --- */
+    #state-process {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      gap: 1.5rem;
+    }
+
+    #blurred-text {
+      position: absolute;
+      inset: 0;
+      padding: 2.5rem 1rem 1rem;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    #blurred-text .text-line {
+      filter: blur(4px);
+      opacity: 0.3;
+    }
+
+    .process-inner {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .process-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1.5px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px var(--accent-glow);
+      animation: pulse-ring 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-ring {
+      0%, 100% { box-shadow: 0 0 12px var(--accent-glow); }
+      50%       { box-shadow: 0 0 28px var(--accent-glow), 0 0 48px rgba(167,139,250,0.2); }
+    }
+
+    .process-icon svg { color: var(--accent); }
+
+    .progress-wrap {
+      width: 100%;
+      max-width: 220px;
+    }
+
+    .progress-bar-track {
+      width: 100%;
+      height: 2px;
+      background: rgba(167,139,250,0.15);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 0.6rem;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #7c3aed, var(--accent));
+      border-radius: 99px;
+      transition: width 0.1s linear;
+    }
+
+    .process-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      color: rgba(167,139,250,0.5);
+      text-align: center;
+    }
+
+    .process-pct {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-align: right;
+    }
+
+    /* --- State 3: video --- */
+    #state-output {
+      background: #000;
+    }
+
+    #output-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* ═══════════════════════════════════════
+       SECTION 2 — BOTTOM WAITLIST FORM
+    ═══════════════════════════════════════ */
+    #bottom-cta {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 480px;
+      margin-top: 3.5rem;
+      text-align: center;
+    }
+
+    #bottom-cta .cta-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      color: rgba(167,139,250,0.4);
+      margin-bottom: 1.25rem;
+    }
+
+    #bottom-cta .cta-row {
+      display: flex;
+      gap: 0.6rem;
+    }
+
+    @media (max-width: 480px) {
+      #bottom-cta .cta-row { flex-direction: column; }
+    }
+
+    #email-input-2 {
+      flex: 1;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--glass-border);
+      border-radius: 3px;
+      color: var(--text-bright);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+      padding: 0.75rem 1rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    #email-input-2::placeholder { color: rgba(167,139,250,0.38); }
+
+    #email-input-2:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(167,139,250,0.1);
+    }
+
+    #submit-btn-2 {
+      flex-shrink: 0;
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+      border: none;
+      border-radius: 3px;
+      color: #fff;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 0 20px rgba(124,58,237,0.35);
+      white-space: nowrap;
+    }
+
+    #submit-btn-2::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    #submit-btn-2:hover { transform: translateY(-1px); box-shadow: 0 0 32px rgba(124,58,237,0.55); }
+    #submit-btn-2:hover::before { opacity: 1; }
+    #submit-btn-2:active { transform: translateY(0); }
+    #submit-btn-2 span { position: relative; z-index: 1; }
+    #submit-btn-2.loading { pointer-events: none; opacity: 0.7; }
+
+    #error-msg-2 {
+      font-size: 0.72rem;
+      color: #f87171;
+      margin-top: 0.5rem;
+      min-height: 1rem;
+      font-family: 'Share Tech Mono', monospace;
+      letter-spacing: 0.05em;
+      text-align: left;
+    }
+
+    #success-msg-2 {
+      display: none;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      padding: 0.75rem 0;
+    }
+
+    #success-msg-2.visible { display: block; opacity: 1; transform: translateY(0); }
+
+    #success-msg-2 .s2-title {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.9rem;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      text-shadow: 0 0 14px var(--accent-glow);
+      margin-bottom: 0.3rem;
+    }
+
+    #success-msg-2 .s2-body {
+      font-size: 0.78rem;
+      color: rgba(200,190,255,0.55);
+      letter-spacing: 0.04em;
+    }
+
+    /* ═══════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════ */
+    #site-footer {
+      width: 100%;
+      padding: 1.25rem 2rem;
+      display: flex;
+      justify-content: center;
+      border-top: 1px solid rgba(167,139,250,0.07);
+    }
+
+    #footer-note {
+      font-size: 0.65rem;
+      color: rgba(167,139,250,0.22);
+      font-family: 'Share Tech Mono', monospace;
+      letter-spacing: 0.08em;
+      text-align: center;
     }
   </style>
 </head>
-<body class="flex items-center justify-center min-h-screen">
+<body>
 
-  <!--
-    Background video.
-    Replace the <source src=""> with:
-      • A local file:  <source src="bg.mp4" type="video/mp4" />
-      • A free clip from pexels.com/videos or mixkit.co (dark anime / fantasy)
-    The poster image shows while the video loads.
-  -->
-  <video id="bg-video" autoplay muted loop playsinline
-    poster="https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=1600&q=80">
-    <source src="zlodeyka_bg.mp4.mp4" type="video/mp4" />
-  </video>
+  <!-- ═══════════════════════════════════════
+       SECTION 1 — HERO
+  ═══════════════════════════════════════ -->
+  <section id="hero">
+    <video id="bg-video" autoplay muted loop playsinline
+      poster="https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=1600&q=80">
+      <!--
+        Replace src with your video file, e.g.:
+        <source src="zlodeyka_bg.mp4.mp4" type="video/mp4" />
+      -->
+      <source src="zlodeyka_bg.mp4.mp4" type="video/mp4" />
+    </video>
 
-  <!-- Dark overlay + scanlines -->
-  <div id="overlay"></div>
+    <div id="overlay"></div>
+    <div id="dots-container"></div>
 
-  <!-- Ambient particles -->
-  <div id="dots-container"></div>
+    <div id="card">
+      <div class="corner-br"></div>
 
-  <!-- EN / RU switcher -->
-  <div id="lang-switcher">
-    <button class="lang-btn active" onclick="setLang('en')">EN</button>
-    <button class="lang-btn"        onclick="setLang('ru')">RU</button>
-  </div>
+      <div id="logo">YUME FRAMES</div>
 
-  <!-- ── Main card ── -->
-  <div id="card">
-    <div class="corner-br"></div>
+      <h1 id="headline">Turn ANY Manhwa text into Anime.<br>Pure AI generation.</h1>
+      <p  id="subheadline">The waitlist for early beta is strictly limited.</p>
 
-    <div id="logo">YUME FRAMES</div>
+      <div class="sep"></div>
 
-    <h1 id="headline"></h1>
-    <p  id="subheadline"></p>
+      <div id="form-area">
+        <input id="email-input" type="email" autocomplete="email" inputmode="email" placeholder="Enter your email" />
+        <button id="submit-btn" onclick="handleSubmit()">
+          <span id="btn-label">Join the Waitlist</span>
+        </button>
+        <div id="error-msg"></div>
+      </div>
 
-    <div class="sep"></div>
-
-    <!-- Waitlist form -->
-    <div id="form-area">
-      <input
-        id="email-input"
-        type="email"
-        autocomplete="email"
-        inputmode="email"
-      />
-      <button id="submit-btn" onclick="handleSubmit()">
-        <span id="btn-label"></span>
-      </button>
-      <div id="error-msg"></div>
+      <div id="success-msg">
+        <div class="icon">⬡</div>
+        <div class="s-title" id="success-title">ACCESS GRANTED</div>
+        <div class="s-body"  id="success-body">You are on the list.
+Wait for the system update.</div>
+      </div>
     </div>
 
-    <!-- Success state -->
-    <div id="success-msg">
-      <div class="icon">⬡</div>
-      <div class="title" id="success-title"></div>
-      <div class="body"  id="success-body"></div>
+    <!-- scroll cue -->
+    <div id="scroll-hint">
+      <span>SCROLL</span>
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M7 2v10M3 8l4 4 4-4"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       SECTION 2 — HOW IT WORKS
+  ═══════════════════════════════════════ -->
+  <section id="how-it-works">
+    <p class="section-label" style="position:relative;z-index:1;">// PROCESS</p>
+    <h2 class="section-title" style="position:relative;z-index:1;" id="hiw-title">How It Works</h2>
+    <p  class="section-sub"  style="position:relative;z-index:1;" id="hiw-sub">From raw text to animated episode in three steps.</p>
+
+    <div id="hiw-split">
+
+      <!-- Left: steps -->
+      <div>
+        <div id="steps-list">
+
+          <div class="step-item active" data-step="0">
+            <div class="step-num">01</div>
+            <div class="step-content">
+              <div class="step-tag" id="tag-0">INPUT</div>
+              <div class="step-title" id="stitle-0">Paste your chapter</div>
+              <div class="step-desc"  id="sdesc-0">Paste a chapter from any novel or manga. Raw text, any language — the engine handles the rest.</div>
+            </div>
+          </div>
+
+          <div class="step-item" data-step="1">
+            <div class="step-num">02</div>
+            <div class="step-content">
+              <div class="step-tag" id="tag-1">PROCESS</div>
+              <div class="step-title" id="stitle-1">AI interprets &amp; renders</div>
+              <div class="step-desc"  id="sdesc-1">The AI engine reads narrative structure, voices characters, and renders continuous animated scenes.</div>
+            </div>
+          </div>
+
+          <div class="step-item" data-step="2">
+            <div class="step-num">03</div>
+            <div class="step-content">
+              <div class="step-tag" id="tag-2">OUTPUT</div>
+              <div class="step-title" id="stitle-2">Download your episode</div>
+              <div class="step-desc"  id="sdesc-2">Your generated anime episode is ready. Download in HD and share with the world.</div>
+            </div>
+          </div>
+
+        </div>
+
+        <div id="step-progress">
+          <div class="prog-dot active" data-prog="0"></div>
+          <div class="prog-dot"        data-prog="1"></div>
+          <div class="prog-dot"        data-prog="2"></div>
+        </div>
+      </div>
+
+      <!-- Right: phone frame -->
+      <div id="phone-wrap">
+      <div id="magic-box">
+
+        <!-- State 1: scrolling input text -->
+        <div class="mb-state active" id="state-input">
+          <div id="scroll-track">
+            <!-- content duplicated for seamless loop -->
+            <div class="text-line">"Riftan Calypse is no longer a low-ranking knight!</div>
+            <div class="text-line">He has become one of the sword masters on the continent,</div>
+            <div class="text-line">and the 'bold warrior' who has defeated the Red Dragon!</div>
+            <div class="text-line">If he wants to, the temple will consent to a divorce permit."</div>
+            <div class="text-line">&nbsp;</div>
+            <div class="text-line">Just imagining it was horrible, and he breathed loudly,</div>
+            <div class="text-line">his forehead creasing.</div>
+            <div class="text-line">&nbsp;</div>
+            <div class="text-line">"For the spirit of the Cross family you should not be divorced</div>
+            <div class="text-line">by a knight from the heavens! You can't let the family become</div>
+            <div class="text-line">a laughingstock because of their stupid daughter."</div>
+            <div class="text-line">&nbsp;</div>
+            <div class="text-line">She bit her lips. The objection that it wasn't her fault</div>
+            <div class="text-line">soared to her throat. She had never wanted to marry Riftan Calypse</div>
+            <div class="text-line">and she knew he felt the same way.</div>
+            <div class="text-line">Wasn't it the duke himself who pushed ahead with the marriage</div>
+            <div class="text-line">that no one asked for?</div>
+            <div class="text-line">&nbsp;</div>
+            <div class="text-line">Whether he had read her rebellious thoughts or not,</div>
+            <div class="text-line">her father remained icy.</div>
+            <!-- duplicate for seamless loop -->
+            <div class="text-line">"Riftan Calypse is no longer a low-ranking knight!</div>
+            <div class="text-line">He has become one of the sword masters on the continent,</div>
+            <div class="text-line">and the 'bold warrior' who has defeated the Red Dragon!</div>
+            <div class="text-line">If he wants to, the temple will consent to a divorce permit."</div>
+            <div class="text-line">&nbsp;</div>
+            <div class="text-line">Just imagining it was horrible, and he breathed loudly,</div>
+            <div class="text-line">his forehead creasing.</div>
+            <div class="text-line">&nbsp;</div>
+            <div class="text-line">"For the spirit of the Cross family you should not be divorced</div>
+            <div class="text-line">by a knight from the heavens! You can't let the family become</div>
+            <div class="text-line">a laughingstock because of their stupid daughter."</div>
+            <div class="text-line">&nbsp;</div>
+            <div class="text-line">She bit her lips. The objection that it wasn't her fault</div>
+            <div class="text-line">soared to her throat. She had never wanted to marry Riftan Calypse</div>
+            <div class="text-line">and she knew he felt the same way.</div>
+            <div class="text-line">Wasn't it the duke himself who pushed ahead with the marriage</div>
+            <div class="text-line">that no one asked for?</div>
+            <div class="text-line">&nbsp;</div>
+            <div class="text-line">Whether he had read her rebellious thoughts or not,</div>
+            <div class="text-line">her father remained icy.</div>
+          </div>
+        </div>
+
+        <!-- State 2: processing -->
+        <div class="mb-state" id="state-process">
+          <div id="blurred-text" aria-hidden="true">
+            <div class="text-line">The dungeon was silent save for the distant drip of water against stone.</div>
+            <div class="text-line">Seraphina pressed her back to the cold wall, her breath shallow, controlled.</div>
+            <div class="text-line">The System notification blinked at the corner of her vision — gold on black.</div>
+            <div class="text-line">"Not now," she whispered, forcing her focus on the corridor ahead.</div>
+            <div class="text-line">Three guards. Two torches. One shadow wide enough to slip through unnoticed.</div>
+            <div class="text-line">She counted heartbeats, watching the patrol rhythm until it became music.</div>
+          </div>
+          <div class="process-inner">
+            <div class="process-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+            <div class="progress-wrap">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <div class="process-label" id="gen-label">Generating scenes and voices...</div>
+                <div class="process-pct" id="gen-pct">0%</div>
+              </div>
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progress-fill"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- State 3: output video -->
+        <div class="mb-state" id="state-output">
+          <!--
+            Replace src with your output demo video.
+            Recommended: a short looping clip of the generated anime scene.
+          -->
+          <video id="output-video" autoplay loop muted playsinline>
+            <source src="0615.mp4.mp4" type="video/mp4" />
+          </video>
+        </div>
+
+      </div><!-- /magic-box -->
+      </div><!-- /phone-wrap -->
+    </div><!-- /hiw-split -->
+
+    <!-- ── Bottom waitlist CTA ── -->
+    <div id="bottom-cta">
+      <p class="cta-label">// JOIN THE WAITLIST</p>
+
+      <div id="form-area-2">
+        <div class="cta-row">
+          <input
+            id="email-input-2"
+            type="email"
+            autocomplete="email"
+            inputmode="email"
+            placeholder="Enter your email"
+          />
+          <button id="submit-btn-2" onclick="handleSubmit2()">
+            <span id="btn-label-2">Join the Waitlist</span>
+          </button>
+        </div>
+        <div id="error-msg-2"></div>
+      </div>
+
+      <div id="success-msg-2">
+        <div class="s2-title">⬡ ACCESS GRANTED</div>
+        <div class="s2-body">You are on the list. Wait for the system update.</div>
+      </div>
     </div>
 
-    <div id="footer-note"></div>
-  </div>
+  </section>
 
+  <!-- ═══════════════════════════════════════
+       FOOTER
+  ═══════════════════════════════════════ -->
+  <footer id="site-footer">
+    <div id="footer-note">// no spam · unsubscribe anytime · yume-frames.com</div>
+  </footer>
+
+  <!-- ═══════════════════════════════════════
+       JAVASCRIPT
+  ═══════════════════════════════════════ -->
   <script>
-    // ─────────────────────────────────────────────────────────────
-    //  CONFIG
-    //  Replace with your own Google Apps Script Web App URL.
-    // ─────────────────────────────────────────────────────────────
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzVzcLpkyS_e6knupbj-YMRXTKUjQZ4CiY20e03L3MemLomjPCRicP39ebfNJwnnuyVww/exec';
+    // ─────────────────────────────────────────
+    //  CONFIG — paste your Apps Script URL here
+    // ─────────────────────────────────────────
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbydIPopGOVBHRCTHfdWQb_0D13q9n0sPxZvc7jJ0MvffycGO1PLLgXQhk7guxMieeQS7A/exec';
 
-    // ─────────────────────────────────────────────────────────────
-    //  TRANSLATIONS
-    // ─────────────────────────────────────────────────────────────
-    const i18n = {
-      en: {
-        headline:      'Turn ANY Manhwa text into Anime.\nPure AI generation.',
-        subheadline:   'The waitlist for early beta is strictly limited.',
-        placeholder:   'Enter your email',
-        btnLabel:      'Join the Waitlist',
-        errorEmpty:    '> enter a valid email address',
-        errorInvalid:  '> invalid email format',
-        errorNetwork:  '> connection failed — try again',
-        successTitle:  'ACCESS GRANTED',
-        successBody:   'You are on the list.\nWait for the system update.',
-        footerNote:    '// no spam · unsubscribe anytime',
-      },
-      ru: {
-        headline:      'Оживляем любимую манхву.\n100% ИИ-генерация аниме из текста.',
-        subheadline:   'Лист ожидания на ранний бета-тест строго ограничен.',
-        placeholder:   'Введите ваш email',
-        btnLabel:      'Занять место',
-        errorEmpty:    '> введите корректный email',
-        errorInvalid:  '> неверный формат email',
-        errorNetwork:  '> ошибка соединения — попробуйте снова',
-        successTitle:  'ДОСТУП ПОЛУЧЕН',
-        successBody:   'Вы в списке.\nОжидайте обновления системы.',
-        footerNote:    '// без спама · отписка в любой момент',
-      },
-    };
-
-    let currentLang = 'en';
-
-    function setLang(lang) {
-      currentLang = lang;
-      const t = i18n[lang];
-
-      document.getElementById('headline').innerText      = t.headline;
-      document.getElementById('subheadline').innerText   = t.subheadline;
-      document.getElementById('email-input').placeholder = t.placeholder;
-      document.getElementById('btn-label').innerText     = t.btnLabel;
-      document.getElementById('success-title').innerText = t.successTitle;
-      document.getElementById('success-body').innerText  = t.successBody;
-      document.getElementById('footer-note').innerText   = t.footerNote;
-      document.getElementById('error-msg').innerText     = '';
-
-      document.querySelectorAll('.lang-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.textContent === lang.toUpperCase());
-      });
-
-      document.documentElement.lang = lang;
-    }
-
-    setLang('en'); // default
-
-    // ─────────────────────────────────────────────────────────────
-    //  FORM SUBMIT
-    // ─────────────────────────────────────────────────────────────
-    async function handleSubmit() {
-      const t     = i18n[currentLang];
-      const input = document.getElementById('email-input');
-      const btn   = document.getElementById('submit-btn');
-      const err   = document.getElementById('error-msg');
-      const email = input.value.trim();
-
-      err.innerText = '';
-
-      if (!email) {
-        err.innerText = t.errorEmpty;
-        shake(input);
-        return;
-      }
-
-      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRe.test(email)) {
-        err.innerText = t.errorInvalid;
-        shake(input);
-        return;
-      }
-
-      btn.classList.add('loading');
-      document.getElementById('btn-label').innerText = '...';
-
-      try {
-        // no-cors is required for Google Apps Script cross-origin POST.
-        // The response will be opaque, so we assume success if no network error.
-        await fetch(APPS_SCRIPT_URL, {
-          method:  'POST',
-          mode:    'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({
-            email,
-            lang: currentLang,
-            ts:   new Date().toISOString(),
-          }),
-        });
-        showSuccess();
-      } catch (_) {
-        err.innerText = t.errorNetwork;
-        btn.classList.remove('loading');
-        document.getElementById('btn-label').innerText = t.btnLabel;
-      }
-    }
-
-    function showSuccess() {
-      document.getElementById('form-area').classList.add('hidden');
-      const msg = document.getElementById('success-msg');
-      msg.style.display = 'block';
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => msg.classList.add('visible'))
-      );
-    }
-
-    // Horizontal shake on invalid input
+    // ─────────────────────────────────────────
+    //  SHARED HELPERS
+    // ─────────────────────────────────────────
     function shake(el) {
       const moves = [-6, 6, -5, 5, -3, 3, 0];
       let i = 0;
@@ -525,28 +1064,177 @@
       step();
     }
 
+    async function submitEmail(email) {
+      await fetch(APPS_SCRIPT_URL, {
+        method:  'POST',
+        mode:    'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email, ts: new Date().toISOString() }),
+      });
+    }
+
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    // ─────────────────────────────────────────
+    //  FORM 1 — Hero
+    // ─────────────────────────────────────────
+    async function handleSubmit() {
+      const input = document.getElementById('email-input');
+      const btn   = document.getElementById('submit-btn');
+      const err   = document.getElementById('error-msg');
+      const email = input.value.trim();
+
+      err.innerText = '';
+      if (!email)              { err.innerText = '> enter a valid email address'; shake(input); return; }
+      if (!EMAIL_RE.test(email)) { err.innerText = '> invalid email format';        shake(input); return; }
+
+      btn.classList.add('loading');
+      document.getElementById('btn-label').innerText = '...';
+
+      try {
+        await submitEmail(email);
+        document.getElementById('form-area').classList.add('hidden');
+        const msg = document.getElementById('success-msg');
+        msg.style.display = 'block';
+        requestAnimationFrame(() => requestAnimationFrame(() => msg.classList.add('visible')));
+      } catch (_) {
+        err.innerText = '> connection failed — try again';
+        btn.classList.remove('loading');
+        document.getElementById('btn-label').innerText = 'Join the Waitlist';
+      }
+    }
+
     document.getElementById('email-input').addEventListener('keydown', e => {
       if (e.key === 'Enter') handleSubmit();
     });
 
-    // ─────────────────────────────────────────────────────────────
-    //  AMBIENT PARTICLES
-    // ─────────────────────────────────────────────────────────────
-    const container = document.getElementById('dots-container');
+    // ─────────────────────────────────────────
+    //  FORM 2 — How it works section
+    // ─────────────────────────────────────────
+    async function handleSubmit2() {
+      const input = document.getElementById('email-input-2');
+      const btn   = document.getElementById('submit-btn-2');
+      const err   = document.getElementById('error-msg-2');
+      const email = input.value.trim();
+
+      err.innerText = '';
+      if (!email)              { err.innerText = '> enter a valid email address'; shake(input); return; }
+      if (!EMAIL_RE.test(email)) { err.innerText = '> invalid email format';        shake(input); return; }
+
+      btn.classList.add('loading');
+      document.getElementById('btn-label-2').innerText = '...';
+
+      try {
+        await submitEmail(email);
+        document.getElementById('form-area-2').style.display = 'none';
+        const msg = document.getElementById('success-msg-2');
+        msg.style.display = 'block';
+        requestAnimationFrame(() => requestAnimationFrame(() => msg.classList.add('visible')));
+      } catch (_) {
+        err.innerText = '> connection failed — try again';
+        btn.classList.remove('loading');
+        document.getElementById('btn-label-2').innerText = 'Join the Waitlist';
+      }
+    }
+
+    document.getElementById('email-input-2').addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleSubmit2();
+    });
+
+    // ─────────────────────────────────────────
+    //  HOW IT WORKS — STATE MACHINE
+    // ─────────────────────────────────────────
+    const STEP_DURATIONS = [2500, 3200, 4000]; // ms per state before advancing
+    let currentStep = 0;
+    let stepTimer   = null;
+    let progressRaf = null;
+
+    const states    = ['state-input', 'state-process', 'state-output'];
+    const stepItems = document.querySelectorAll('.step-item');
+    const progDots  = document.querySelectorAll('.prog-dot');
+
+    const outputVideo = document.getElementById('output-video');
+
+    function setStep(idx) {
+      currentStep = idx;
+
+      stepItems.forEach((el, i) => el.classList.toggle('active', i === idx));
+      progDots.forEach((el, i)  => el.classList.toggle('active', i === idx));
+
+      states.forEach((id, i) => {
+        document.getElementById(id).classList.toggle('active', i === idx);
+      });
+
+      if (idx === 1) {
+        startProgress();
+      } else {
+        stopProgress();
+      }
+
+      if (idx === 2) {
+        outputVideo.currentTime = 0;
+        outputVideo.play().catch(() => {});
+      } else {
+        outputVideo.pause();
+      }
+
+      clearTimeout(stepTimer);
+      stepTimer = setTimeout(() => setStep((idx + 1) % 3), STEP_DURATIONS[idx]);
+    }
+
+    // Animated progress bar for state 2
+    let progressStart = null;
+    const PROGRESS_DURATION = 3000; // ms
+
+    function startProgress() {
+      stopProgress();
+      document.getElementById('progress-fill').style.width = '0%';
+      document.getElementById('gen-pct').innerText = '0%';
+      progressStart = null;
+
+      function tick(ts) {
+        if (!progressStart) progressStart = ts;
+        const elapsed = ts - progressStart;
+        const pct = Math.min(100, Math.round((elapsed / PROGRESS_DURATION) * 100));
+        document.getElementById('progress-fill').style.width = pct + '%';
+        document.getElementById('gen-pct').innerText = pct + '%';
+        if (pct < 100) progressRaf = requestAnimationFrame(tick);
+      }
+
+      progressRaf = requestAnimationFrame(tick);
+    }
+
+    function stopProgress() {
+      if (progressRaf) { cancelAnimationFrame(progressRaf); progressRaf = null; }
+    }
+
+    // Start the machine when "How it works" enters the viewport
+    const hiwObserver = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        setStep(0);
+        hiwObserver.disconnect();
+      }
+    }, { threshold: 0.25 });
+
+    hiwObserver.observe(document.getElementById('how-it-works'));
+
+    // ─────────────────────────────────────────
+    //  AMBIENT PARTICLES (hero only)
+    // ─────────────────────────────────────────
+    const dotContainer = document.getElementById('dots-container');
     for (let i = 0; i < 20; i++) {
       const dot  = document.createElement('div');
       dot.className = 'dot';
       const size = Math.random() * 3 + 1;
       dot.style.cssText = `
-        width:${size}px;
-        height:${size}px;
+        width:${size}px; height:${size}px;
         left:${Math.random() * 100}vw;
         bottom:-10px;
         animation-duration:${8 + Math.random() * 14}s;
         animation-delay:${Math.random() * 12}s;
         filter:blur(${Math.random() > 0.5 ? 1 : 0}px);
       `;
-      container.appendChild(dot);
+      dotContainer.appendChild(dot);
     }
   </script>
 </body>
